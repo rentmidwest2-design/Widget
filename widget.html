@@ -1,45 +1,136 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>MWM Tour Widget</title>
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MWM Tour Widget (Animated)</title>
 <style>
-  :root { --grad: linear-gradient(135deg,#eaaa00,#d4940a); --z: 2147483000; }
-  body { margin:0; font:600 14px/1.1 Poppins,system-ui,Segoe UI,Roboto,Arial,sans-serif; background:transparent; }
-  .btn { display:inline-flex; gap:8px; align-items:center;
-         background:var(--grad); color:#fff; padding:12px 16px; border-radius:50px;
-         box-shadow:0 4px 12px rgba(0,0,0,.15); text-decoration:none; }
-  .btn + .btn { margin-top:10px; display:inline-flex; }
-  .wrap { position:fixed; right:0; bottom:0; padding:20px; z-index:var(--z); }
-  svg { width:20px; height:20px; fill:currentColor; }
+body { font-family: 'Poppins', sans-serif; margin: 0; padding: 0; background: transparent; }
+
+/* Floating buttons */
+.floating-scheduler-mini {
+  position: fixed; right: 20px;
+  background: linear-gradient(135deg,#eaaa00,#d4940a);
+  color: #fff; padding: 14px 18px; border-radius: 50px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  cursor: pointer; z-index: 9999;
+  animation: pulse 2s infinite;
+  display: flex; align-items: center; gap: 8px;
+  font-weight: 600;
+}
+.floating-scheduler-mini:hover { filter: brightness(1.1); }
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(234,170,0,0.6); }
+  70% { box-shadow: 0 0 0 12px rgba(234,170,0,0); }
+  100% { box-shadow: 0 0 0 0 rgba(234,170,0,0); }
+}
+@keyframes svgPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.15); } }
+
+.floating-scheduler-mini svg { width: 20px; height: 20px; fill: #fff; animation: svgPulse 2s infinite ease-in-out; }
+
+/* Positioning */
+#openSelfGuided { bottom: 80px; }
+#openGuided { bottom: 140px; }
+
+/* Modal styles */
+.scheduler-modal {
+  position: fixed; bottom: 20px; right: 20px;
+  background: #fff; border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  width: 360px; max-height: 80vh; overflow: hidden;
+  display: none; flex-direction: column;
+  z-index: 10000; animation: slideIn 0.4s ease;
+}
+@keyframes slideIn { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+.scheduler-header {
+  background: linear-gradient(135deg,#eaaa00,#d4940a);
+  color: #fff; padding: 12px; font-weight: 600;
+  text-align: center; position: relative;
+}
+.scheduler-close {
+  position: absolute; top: 8px; right: 12px;
+  background: none; border: none; color: #fff;
+  font-size: 24px; cursor: pointer; line-height: 1;
+}
+.scheduler-content { padding: 12px; text-align: center; font-size: 14px; color: #333; }
+.scheduler-iframe { border: none; width: 100%; height: 380px; }
+.testimonial {
+  background: #f9f9f9; padding: 8px; font-size: 12px;
+  font-style: italic; border-radius: 6px; margin: 8px;
+}
 </style>
+</head>
 <body>
-  <div class="wrap">
-    <a id="guided" class="btn" target="_blank" rel="noopener">
-      <svg viewBox="0 0 24 24"><path d="M12 12c2.67 0 8 1.34 8 4v3H4v-3c0-2.66 5.33-4 8-4zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/></svg>
-      <span id="guidedLabel">Book a Showing</span>
-    </a><br>
-    <a id="self" class="btn" target="_blank" rel="noopener">
-      <svg viewBox="0 0 24 24"><path d="M12 17a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm6-6V9a6 6 0 1 0-12 0v2H5v10h14V11h-1zm-8 0V9a4 4 0 1 1 8 0v2h-8z"/></svg>
-      <span id="selfLabel">Self-Guided Viewing</span>
-    </a>
+
+<!-- Floating Buttons -->
+<div class="floating-scheduler-mini" id="openSelfGuided">
+  <svg viewBox="0 0 24 24"><path d="M12 17a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm6-6V9a6 6 0 1 0-12 0v2H5v10h14V11h-1zm-8 0V9a4 4 0 1 1 8 0v2h-8z"/></svg>
+  <span id="selfLabel">Self-Guided Viewing</span>
+</div>
+
+<div class="floating-scheduler-mini" id="openGuided">
+  <svg viewBox="0 0 24 24"><path d="M12 12c2.67 0 8 1.34 8 4v3H4v-3c0-2.66 5.33-4 8-4zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/></svg>
+  <span id="guidedLabel">Book a Showing</span>
+</div>
+
+<!-- Self-Guided Modal -->
+<div class="scheduler-modal" id="selfGuidedModal">
+  <div class="scheduler-header">Schedule Your Self-Guided Tour
+    <button class="scheduler-close" id="closeSelfGuided">×</button>
   </div>
+  <div class="scheduler-content">
+    <div>Tour on your schedule, even after hours.</div>
+    <div>Step 1: Choose Date 📅</div>
+    <div>Step 2: Confirm ✨</div>
+    <div class="testimonial">“Loved touring on my own time! So easy.” – Sarah</div>
+  </div>
+  <iframe class="scheduler-iframe" id="selfIframe" allowfullscreen></iframe>
+</div>
+
+<!-- Guided Modal -->
+<div class="scheduler-modal" id="guidedModal">
+  <div class="scheduler-header">Schedule Your Guided Tour
+    <button class="scheduler-close" id="closeGuided">×</button>
+  </div>
+  <div class="scheduler-content">
+    <div>Meet our leasing team for a personalized tour.</div>
+    <div>Step 1: Choose Date 📅</div>
+    <div>Step 2: Confirm ✨</div>
+    <div class="testimonial">“They explained everything and answered all questions.” – Alex</div>
+  </div>
+  <iframe class="scheduler-iframe" id="guidedIframe" allowfullscreen></iframe>
+</div>
+
 <script>
 (function(){
-  // read query params
   const p = new URLSearchParams(location.search);
   const guided = p.get('guided') || '';
-  const self   = p.get('self')   || '';
-  const gLab   = p.get('gLabel') || 'Book a Showing';
-  const sLab   = p.get('sLabel') || 'Self-Guided Viewing';
+  const self = p.get('self') || '';
+  document.getElementById('guidedLabel').textContent = p.get('gLabel') || 'Book a Showing';
+  document.getElementById('selfLabel').textContent = p.get('sLabel') || 'Self-Guided Viewing';
+  const selfM = document.getElementById('selfGuidedModal');
+  const guidM = document.getElementById('guidedModal');
+  const selfI = document.getElementById('selfIframe');
+  const guidI = document.getElementById('guidedIframe');
 
-  // assign
-  const g = document.getElementById('guided');
-  const s = document.getElementById('self');
-  document.getElementById('guidedLabel').textContent = gLab;
-  document.getElementById('selfLabel').textContent   = sLab;
-  if (guided) g.href = guided;
-  if (self)   s.href = self;
+  function closeAll(){ selfM.style.display='none'; guidM.style.display='none'; }
+  function show(m){ closeAll(); m.style.display='flex'; }
+
+  document.getElementById('openSelfGuided').onclick = ()=>{ selfI.src=self; show(selfM); };
+  document.getElementById('openGuided').onclick = ()=>{
+    try { guidI.src=guided; show(guidM);
+      setTimeout(()=>{ try{void guidI.contentWindow.location.href;}
+      catch(_){ window.open(guided,'_blank'); guidM.style.display='none'; } },1000);
+    } catch(e){ window.open(guided,'_blank'); }
+  };
+  document.getElementById('closeSelfGuided').onclick = closeAll;
+  document.getElementById('closeGuided').onclick = closeAll;
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')closeAll();});
+  document.addEventListener('click',e=>{
+    [selfM,guidM].forEach(m=>{if(m.style.display==='flex'&&!m.contains(e.target)&&!e.target.classList.contains('floating-scheduler-mini'))m.style.display='none';});
+  });
 })();
 </script>
 </body>
