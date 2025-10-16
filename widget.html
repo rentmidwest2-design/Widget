@@ -3,11 +3,13 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>MWM Tour Widget (Animated)</title>
+<title>MWM Dual Widget (Animated)</title>
 <style>
-body { font-family: 'Poppins', sans-serif; margin: 0; padding: 0; background: transparent; }
-
-/* Floating buttons */
+body {
+  font-family: 'Poppins', sans-serif;
+  margin: 0; padding: 0; background: transparent;
+}
+/* Floating Buttons */
 .floating-scheduler-mini {
   position: fixed; right: 20px;
   background: linear-gradient(135deg,#eaaa00,#d4940a);
@@ -26,14 +28,14 @@ body { font-family: 'Poppins', sans-serif; margin: 0; padding: 0; background: tr
   100% { box-shadow: 0 0 0 0 rgba(234,170,0,0); }
 }
 @keyframes svgPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.15); } }
-
-.floating-scheduler-mini svg { width: 20px; height: 20px; fill: #fff; animation: svgPulse 2s infinite ease-in-out; }
-
-/* Positioning */
+.floating-scheduler-mini svg {
+  width: 20px; height: 20px; fill: #fff;
+  animation: svgPulse 2s infinite ease-in-out;
+}
 #openSelfGuided { bottom: 80px; }
 #openGuided { bottom: 140px; }
 
-/* Modal styles */
+/* Modal Styling */
 .scheduler-modal {
   position: fixed; bottom: 20px; right: 20px;
   background: #fff; border-radius: 12px;
@@ -42,8 +44,10 @@ body { font-family: 'Poppins', sans-serif; margin: 0; padding: 0; background: tr
   display: none; flex-direction: column;
   z-index: 10000; animation: slideIn 0.4s ease;
 }
-@keyframes slideIn { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-
+@keyframes slideIn {
+  from { transform: translateY(30px); opacity: 0; }
+  to   { transform: translateY(0);   opacity: 1; }
+}
 .scheduler-header {
   background: linear-gradient(135deg,#eaaa00,#d4940a);
   color: #fff; padding: 12px; font-weight: 600;
@@ -54,11 +58,17 @@ body { font-family: 'Poppins', sans-serif; margin: 0; padding: 0; background: tr
   background: none; border: none; color: #fff;
   font-size: 24px; cursor: pointer; line-height: 1;
 }
-.scheduler-content { padding: 12px; text-align: center; font-size: 14px; color: #333; }
-.scheduler-iframe { border: none; width: 100%; height: 380px; }
+.scheduler-content {
+  padding: 12px; text-align: center;
+  font-size: 14px; color: #333;
+}
+.scheduler-iframe {
+  border: none; width: 100%; height: 380px;
+}
 .testimonial {
-  background: #f9f9f9; padding: 8px; font-size: 12px;
-  font-style: italic; border-radius: 6px; margin: 8px;
+  background: #f9f9f9; padding: 8px;
+  font-size: 12px; font-style: italic;
+  border-radius: 6px; margin: 8px;
 }
 </style>
 </head>
@@ -108,8 +118,10 @@ body { font-family: 'Poppins', sans-serif; margin: 0; padding: 0; background: tr
   const p = new URLSearchParams(location.search);
   const guided = p.get('guided') || '';
   const self = p.get('self') || '';
+
   document.getElementById('guidedLabel').textContent = p.get('gLabel') || 'Book a Showing';
   document.getElementById('selfLabel').textContent = p.get('sLabel') || 'Self-Guided Viewing';
+
   const selfM = document.getElementById('selfGuidedModal');
   const guidM = document.getElementById('guidedModal');
   const selfI = document.getElementById('selfIframe');
@@ -118,18 +130,30 @@ body { font-family: 'Poppins', sans-serif; margin: 0; padding: 0; background: tr
   function closeAll(){ selfM.style.display='none'; guidM.style.display='none'; }
   function show(m){ closeAll(); m.style.display='flex'; }
 
-  document.getElementById('openSelfGuided').onclick = ()=>{ selfI.src=self; show(selfM); };
-  document.getElementById('openGuided').onclick = ()=>{
-    try { guidI.src=guided; show(guidM);
-      setTimeout(()=>{ try{void guidI.contentWindow.location.href;}
-      catch(_){ window.open(guided,'_blank'); guidM.style.display='none'; } },1000);
-    } catch(e){ window.open(guided,'_blank'); }
+  // Open modals
+  document.getElementById('openSelfGuided').onclick = ()=>{
+    if (self) { selfI.src = self; show(selfM); }
   };
+  document.getElementById('openGuided').onclick = ()=>{
+    if (guided) {
+      guidI.src = guided;
+      show(guidM);
+      // If blocked, fallback to new tab
+      setTimeout(()=>{
+        try { void guidI.contentWindow.location.href; }
+        catch(_){ window.open(guided, '_blank'); guidM.style.display='none'; }
+      }, 1000);
+    }
+  };
+
+  // Close buttons
   document.getElementById('closeSelfGuided').onclick = closeAll;
   document.getElementById('closeGuided').onclick = closeAll;
-  document.addEventListener('keydown',e=>{if(e.key==='Escape')closeAll();});
-  document.addEventListener('click',e=>{
-    [selfM,guidM].forEach(m=>{if(m.style.display==='flex'&&!m.contains(e.target)&&!e.target.classList.contains('floating-scheduler-mini'))m.style.display='none';});
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeAll(); });
+  document.addEventListener('click', e=>{
+    [selfM,guidM].forEach(m=>{
+      if(m.style.display==='flex' && !m.contains(e.target) && !e.target.classList.contains('floating-scheduler-mini')) m.style.display='none';
+    });
   });
 })();
 </script>
