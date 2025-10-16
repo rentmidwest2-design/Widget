@@ -1,6 +1,6 @@
 /*! Midwest Property Management — Dual Tour Widgets Loader (Guided + Self-Guided)
  *  File: mwm-tour-widgets.min.js
- *  Version: 1.1.0 (2025-10-16)
+ *  Version: 1.1.1 (2025-10-16)
  *  Notes:
  *   - Labels: Guided → “Book a Showing”, Self-Guided → “Self-Guided Viewing”
  *   - Floating pill buttons with pulse + hover brighten
@@ -69,8 +69,13 @@
   // ---- Button + modal wiring ----
   function mountUI(cfg){
     injectStyles(cfg.theme,cfg.zIndex);
-    var gBtn=create('button','mwm-btn'); gBtn.id='openGuided'; gBtn.textContent=cfg.labels.guided; css(gBtn,{bottom:'140px'});
-    var sBtn=create('button','mwm-btn'); sBtn.id='openSelfGuided'; sBtn.textContent=cfg.labels.selfGuided; css(sBtn,{bottom:'80px'});
+
+    // SVG icons
+    var personIcon = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true" width="20" height="20"><path fill="currentColor" d="M12 12c2.67 0 8 1.34 8 4v3H4v-3c0-2.66 5.33-4 8-4zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/></svg>';
+    var lockIcon = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true" width="20" height="20"><path fill="currentColor" d="M12 17a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm6-6V9a6 6 0 1 0-12 0v2H5v10h14V11h-1zm-8 0V9a4 4 0 1 1 8 0v2h-8z"/></svg>';
+
+    var gBtn=create('button','mwm-btn'); gBtn.id='openGuided'; gBtn.setAttribute('aria-haspopup','dialog'); gBtn.innerHTML=personIcon+" "+cfg.labels.guided; css(gBtn,{bottom:'140px'});
+    var sBtn=create('button','mwm-btn'); sBtn.id='openSelfGuided'; sBtn.setAttribute('aria-haspopup','dialog'); sBtn.innerHTML=lockIcon+" "+cfg.labels.selfGuided; css(sBtn,{bottom:'80px'});
     d.body.appendChild(gBtn); d.body.appendChild(sBtn);
 
     var gModal=buildModal(cfg.labels.guided,cfg.guided,'mwm-guided');
@@ -79,14 +84,33 @@
 
     function closeAll(){ gModal.style.display='none'; sModal.style.display='none'; }
 
-    gBtn.addEventListener('click',function(){ closeAll(); openModal(gModal); });
-    sBtn.addEventListener('click',function(){ closeAll(); openModal(sModal); });
+    function safeOpen(modal, url){
+      try{
+        var ifr = modal.querySelector('iframe');
+        if(url && /^https?:\/\//i.test(url)){
+          ifr.src = url;
+          modal.style.display='flex';
+          // Fallback: if iframe fails due to X-Frame-Options/CSP, open new tab after short delay
+          setTimeout(function(){
+            try{ var sameOrigin = !!ifr.contentWindow.location.href; /* access may throw */ }
+            catch(e){ window.open(url,'_blank','noopener'); modal.style.display='none'; }
+          }, 700);
+        } else {
+          console.warn('[MWM] Missing/invalid URL for modal');
+        }
+      }catch(err){
+        console.error('[MWM] Error opening modal', err); window.open(url,'_blank','noopener');
+      }
+    }
+
+    gBtn.addEventListener('click',function(e){ e.preventDefault(); closeAll(); safeOpen(gModal,cfg.guided); });
+    sBtn.addEventListener('click',function(e){ e.preventDefault(); closeAll(); safeOpen(sModal,cfg.selfGuided); });
 
     d.addEventListener('keydown',function(e){ if(e.key==='Escape') closeAll(); });
     d.addEventListener('click',function(e){ [gModal,sModal].forEach(function(m){ if(m.style.display==='flex' && !m.contains(e.target) && e.target!==gBtn && e.target!==sBtn){ m.style.display='none'; }}); });
   }
 
-  // ---- Config (per-page override supported) ----
+  // ---- Config (per-page override supported) ---- (per-page override supported) ----
   function getConfig(){
     var host=(location.hostname||'').toLowerCase();
     var mapped=SITE_MAP[host]||{};
