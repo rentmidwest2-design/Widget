@@ -1,6 +1,6 @@
 /*! Midwest Property Management — Dual Tour Widgets Loader (Guided + Self-Guided)
  *  File: mwm-tour-widgets.min.js
- *  Version: 1.1.2 (2025-10-16)
+ *  Version: 1.1.3 (2025-10-16)
  *  Notes:
  *   - Labels: Guided → “Book a Showing”, Self-Guided → “Self-Guided Viewing”
  *   - Floating pill buttons with pulse + hover brighten
@@ -84,43 +84,55 @@
 
     function closeAll(){ gModal.style.display='none'; sModal.style.display='none'; }
 
-    // Popup-safe fallback: open a tab synchronously, then decide whether to keep it
-    function openWithFallback(modal, url){
-      if(!url || !/^https?:\/\//i.test(url)){ console.warn('[MWM] invalid URL'); return; }
+    function log(){ if(cfg.debug && w.console){ try{ console.log.apply(console,arguments);}catch(_){} } }
+
+    function immediateNewTab(url){
+      log('[MWM] immediateNewTab →', url);
+      try{ window.open(url,'_blank','noopener'); }
+      catch(e){ log('[MWM] window.open blocked', e); }
+    }
+
+    // Robust opener: supports strict popup blockers and CSP
+    function openWithRobustFallback(modal, url){
+      if(!url || !/^https?:\/\//i.test(url)){ log('[MWM] invalid URL', url); return; }
+      if(cfg.forceNewTab){ immediateNewTab(url); return; }
+
       closeAll();
+      var popup = null;
+      try{ popup = window.open('about:blank','_blank','noopener'); }catch(e){ log('[MWM] failed to preopen tab', e); }
 
-      // 1) Synchronous new tab to avoid popup blockers
-      var popup = window.open('about:blank','_blank','noopener');
-
-      // 2) Try modal iframe load
       var ifr = modal.querySelector('iframe');
       var settled = false;
-      var keepModal = function(){ if(settled) return; settled=true; if(popup && !popup.closed){ try{ popup.close(); }catch(_){} } modal.style.display='flex'; };
-      var fallback = function(){ if(settled) return; settled=true; try{ if(popup && !popup.closed){ popup.location.href = url; popup.focus(); } else { window.open(url,'_blank','noopener'); } }catch(_){ window.open(url,'_blank','noopener'); } modal.style.display='none'; };
+      var keepModal = function(){ if(settled) return; settled=true; if(popup && !popup.closed){ try{ popup.close(); }catch(_){} } modal.style.display='flex'; log('[MWM] iframe loaded in modal'); };
+      var fallback = function(){ if(settled) return; settled=true; log('[MWM] iframe blocked → fallback new tab'); try{ if(popup && !popup.closed){ popup.location.href = url; popup.focus(); } else { window.open(url,'_blank','noopener'); } }catch(_){ window.open(url,'_blank','noopener'); } modal.style.display='none'; };
 
       try{
         ifr.src = url;
-        // If it loads, keep modal and close popup
-        var loadTimer = setTimeout(fallback, 900); // if no load event ~blocked by XFO/CSP
+        var loadTimer = setTimeout(fallback, 700);
         ifr.onload = function(){ clearTimeout(loadTimer); keepModal(); };
-      }catch(e){ fallback(); }
+      }catch(e){ log('[MWM] setting iframe src failed', e); fallback(); }
     }
 
-    gBtn.addEventListener('click',function(e){ e.preventDefault(); openWithFallback(gModal,cfg.guided); });
-    sBtn.addEventListener('click',function(e){ e.preventDefault(); openWithFallback(sModal,cfg.selfGuided); });
+    // Prefer pointer events for better mobile reliability
+    ['pointerdown','click','touchend'].forEach(function(evt){
+      gBtn.addEventListener(evt,function(e){ e.preventDefault(); e.stopPropagation(); openWithRobustFallback(gModal,cfg.guided); },{passive:false});
+      sBtn.addEventListener(evt,function(e){ e.preventDefault(); e.stopPropagation(); openWithRobustFallback(sModal,cfg.selfGuided); },{passive:false});
+    });
 
     d.addEventListener('keydown',function(e){ if(e.key==='Escape') closeAll(); });
     d.addEventListener('click',function(e){ [gModal,sModal].forEach(function(m){ if(m.style.display==='flex' && !m.contains(e.target) && e.target!==gBtn && e.target!==sBtn){ m.style.display='none'; }}); });
   }
 
   // ---- Config (per-page override supported) ----
-  function getConfig(){(){
+  function getConfig(){
     var host=(location.hostname||'').toLowerCase();
     var mapped=SITE_MAP[host]||{};
     var ctn=$('#mwm-tour-widget');
     var guided=ctn && ctn.getAttribute('data-guided') || mapped.guided;
     var selfGuided=ctn && ctn.getAttribute('data-selfguided') || mapped.selfGuided;
-    return merge(DEFAULTS,{guided:guided,selfGuided:selfGuided});
+    var forceNewTab = (ctn && (ctn.getAttribute('data-forcenewtab')==='1' || ctn.getAttribute('data-forcenewtab')==='true')) || false;
+    var debug = /[?&]mwm_debug=1/.test(location.search);
+    return merge(DEFAULTS,{guided:guided,selfGuided:selfGuided,forceNewTab:forceNewTab,debug:debug});
   }
 
   function init(){
