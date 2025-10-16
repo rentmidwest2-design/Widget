@@ -1,6 +1,6 @@
 /*! Midwest Property Management — Dual Tour Widgets Loader (Guided + Self-Guided)
  *  File: mwm-tour-widgets.min.js
- *  Version: 1.1.1 (2025-10-16)
+ *  Version: 1.1.2 (2025-10-16)
  *  Notes:
  *   - Labels: Guided → “Book a Showing”, Self-Guided → “Self-Guided Viewing”
  *   - Floating pill buttons with pulse + hover brighten
@@ -84,34 +84,37 @@
 
     function closeAll(){ gModal.style.display='none'; sModal.style.display='none'; }
 
-    function safeOpen(modal, url){
+    // Popup-safe fallback: open a tab synchronously, then decide whether to keep it
+    function openWithFallback(modal, url){
+      if(!url || !/^https?:\/\//i.test(url)){ console.warn('[MWM] invalid URL'); return; }
+      closeAll();
+
+      // 1) Synchronous new tab to avoid popup blockers
+      var popup = window.open('about:blank','_blank','noopener');
+
+      // 2) Try modal iframe load
+      var ifr = modal.querySelector('iframe');
+      var settled = false;
+      var keepModal = function(){ if(settled) return; settled=true; if(popup && !popup.closed){ try{ popup.close(); }catch(_){} } modal.style.display='flex'; };
+      var fallback = function(){ if(settled) return; settled=true; try{ if(popup && !popup.closed){ popup.location.href = url; popup.focus(); } else { window.open(url,'_blank','noopener'); } }catch(_){ window.open(url,'_blank','noopener'); } modal.style.display='none'; };
+
       try{
-        var ifr = modal.querySelector('iframe');
-        if(url && /^https?:\/\//i.test(url)){
-          ifr.src = url;
-          modal.style.display='flex';
-          // Fallback: if iframe fails due to X-Frame-Options/CSP, open new tab after short delay
-          setTimeout(function(){
-            try{ var sameOrigin = !!ifr.contentWindow.location.href; /* access may throw */ }
-            catch(e){ window.open(url,'_blank','noopener'); modal.style.display='none'; }
-          }, 700);
-        } else {
-          console.warn('[MWM] Missing/invalid URL for modal');
-        }
-      }catch(err){
-        console.error('[MWM] Error opening modal', err); window.open(url,'_blank','noopener');
-      }
+        ifr.src = url;
+        // If it loads, keep modal and close popup
+        var loadTimer = setTimeout(fallback, 900); // if no load event ~blocked by XFO/CSP
+        ifr.onload = function(){ clearTimeout(loadTimer); keepModal(); };
+      }catch(e){ fallback(); }
     }
 
-    gBtn.addEventListener('click',function(e){ e.preventDefault(); closeAll(); safeOpen(gModal,cfg.guided); });
-    sBtn.addEventListener('click',function(e){ e.preventDefault(); closeAll(); safeOpen(sModal,cfg.selfGuided); });
+    gBtn.addEventListener('click',function(e){ e.preventDefault(); openWithFallback(gModal,cfg.guided); });
+    sBtn.addEventListener('click',function(e){ e.preventDefault(); openWithFallback(sModal,cfg.selfGuided); });
 
     d.addEventListener('keydown',function(e){ if(e.key==='Escape') closeAll(); });
     d.addEventListener('click',function(e){ [gModal,sModal].forEach(function(m){ if(m.style.display==='flex' && !m.contains(e.target) && e.target!==gBtn && e.target!==sBtn){ m.style.display='none'; }}); });
   }
 
-  // ---- Config (per-page override supported) ---- (per-page override supported) ----
-  function getConfig(){
+  // ---- Config (per-page override supported) ----
+  function getConfig(){(){
     var host=(location.hostname||'').toLowerCase();
     var mapped=SITE_MAP[host]||{};
     var ctn=$('#mwm-tour-widget');
