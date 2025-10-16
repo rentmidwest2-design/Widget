@@ -1,6 +1,6 @@
 /*! Midwest Property Management — Dual Tour Widgets (Demo-parity)
  *  File: Dual_widget.js
- *  Version: 1.2.0 (2025-10-16) — Demo-parity build
+ *  Version: 1.2.1 (2025-10-16) — Demo-parity build + click-capture fix
  *  Purpose: Render the exact same UX as the working Village demo across all properties
  *  Labels: Guided → “Book a Showing”; Self-guided → “Self-Guided Viewing”
  */
@@ -52,10 +52,10 @@
     if(d.getElementById('mwm-demo-style')) return;
     var s=d.createElement('style'); s.id='mwm-demo-style';
     s.textContent = "body{font-family:Poppins,system-ui,Segoe UI,Roboto,Arial,sans-serif}"+
-    ".mwm-float{position:fixed;right:20px;background:linear-gradient(135deg,#eaaa00,#d4940a);color:#fff;padding:14px 18px;border-radius:50px;box-shadow:0 4px 12px rgba(0,0,0,.15);cursor:pointer;z-index:9999;display:flex;align-items:center;gap:8px;animation:mwmPulse 2s infinite}"+
+    ".mwm-float{position:fixed;right:20px;background:linear-gradient(135deg,#eaaa00,#d4940a);color:#fff;padding:14px 18px;border-radius:50px;box-shadow:0 4px 12px rgba(0,0,0,.15);cursor:pointer;z-index:2147483000;display:flex;align-items:center;gap:8px;animation:mwmPulse 2s infinite;pointer-events:auto}"+
     ".mwm-float:hover{filter:brightness(1.1)}"+
     "@keyframes mwmPulse{0%{box-shadow:0 0 0 0 rgba(234,170,0,.6)}70%{box-shadow:0 0 0 12px rgba(234,170,0,0)}100%{box-shadow:0 0 0 0 rgba(234,170,0,0)}}"+
-    ".mwm-modal{position:fixed;bottom:20px;right:20px;background:#fff;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.2);width:360px;max-height:80vh;overflow:hidden;display:none;flex-direction:column;z-index:10000;animation:mwmSlideIn .4s ease}"+
+    ".mwm-modal{position:fixed;bottom:20px;right:20px;background:#fff;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.2);width:360px;max-height:80vh;overflow:hidden;display:none;flex-direction:column;z-index:2147483001;animation:mwmSlideIn .4s ease}"+
     "@keyframes mwmSlideIn{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}"+
     ".mwm-head{background:linear-gradient(135deg,#eaaa00,#d4940a);color:#fff;padding:12px;font-weight:600;text-align:center;position:relative}"+
     ".mwm-close{position:absolute;top:8px;right:12px;background:none;border:0;color:#fff;font-size:24px;cursor:pointer;line-height:1}"+
@@ -82,13 +82,13 @@
 
     // Self-guided modal
     var sg = el('div','mwm-modal'); sg.id='mwm-self';
-    var sgHead = el('div','mwm-head','Schedule Your Self-Guided Tour'); var sgX=el('button','mwm-close','\u00D7'); sgHead.appendChild(sgX);
+    var sgHead = el('div','mwm-head','Schedule Your Self-Guided Tour'); var sgX=el('button','mwm-close','×'); sgHead.appendChild(sgX);
     var sgCopy = el('div','mwm-copy','<div>Tour on your schedule, even after hours.</div><div>Step 1: Choose Date 📅</div><div>Step 2: Confirm ✨</div>');
     var sgIfr = el('iframe','mwm-iframe'); sgIfr.src=selfURL; sg.appendChild(sgHead); sg.appendChild(sgCopy); sg.appendChild(sgIfr);
 
     // Guided modal
     var gd = el('div','mwm-modal'); gd.id='mwm-guided';
-    var gdHead = el('div','mwm-head','Schedule Your Guided Tour'); var gdX=el('button','mwm-close','\u00D7'); gdHead.appendChild(gdX);
+    var gdHead = el('div','mwm-head','Schedule Your Guided Tour'); var gdX=el('button','mwm-close','×'); gdHead.appendChild(gdX);
     var gdCopy = el('div','mwm-copy','<div>Meet our leasing team for a personalized tour.</div><div>Step 1: Choose Date 📅</div><div>Step 2: Confirm ✨</div>');
     var gdIfr = el('iframe','mwm-iframe'); gdIfr.src=guidedURL; gd.appendChild(gdHead); gd.appendChild(gdCopy); gd.appendChild(gdIfr);
 
@@ -99,11 +99,20 @@
 
     function open(modal){ closeAll(); modal.style.display='flex'; }
 
-    // Click + keyboard support
-    openSelf.addEventListener('click', function(e){ e.preventDefault(); open(sg); });
-    openGuided.addEventListener('click', function(e){ e.preventDefault(); open(gd); });
-    openSelf.addEventListener('keydown', function(e){ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); open(sg);} });
-    openGuided.addEventListener('keydown', function(e){ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); open(gd);} });
+    // Click + keyboard support (use capture + multiple events, and stopImmediatePropagation)
+    function bindOpen(el, modal){
+      function handler(e){ e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation) e.stopImmediatePropagation(); open(modal); }
+      ['pointerdown','click','touchstart','touchend'].forEach(function(evt){ el.addEventListener(evt, handler, {capture:true, passive:false}); });
+      el.onclick = handler; // inline backup
+      el.addEventListener('keydown', function(e){ if(e.key==='Enter' || e.key===' '){ handler(e); } }, {capture:true});
+      el.style.pointerEvents='auto';
+    }
+    bindOpen(openSelf, sg);
+    bindOpen(openGuided, gd);
+
+    sgX.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); sg.style.display='none'; }, {capture:true});
+    gdX.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); gd.style.display='none'; }, {capture:true});
+    d.addEventListener('keydown', function(e){ if(e.key==='Escape') closeAll(); }); open(gd);} });
     sgX.addEventListener('click', function(){ sg.style.display='none'; });
     gdX.addEventListener('click', function(){ gd.style.display='none'; });
     d.addEventListener('keydown', function(e){ if(e.key==='Escape') closeAll(); });
