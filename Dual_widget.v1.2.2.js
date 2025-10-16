@@ -1,6 +1,6 @@
 /*! Midwest Property Management — Dual Tour Widgets (Demo-parity)
  *  File: Dual_widget.js
- *  Version: 1.2.1 (2025-10-16) — Demo-parity build + click-capture fix
+ *  Version: 1.2.2 (2025-10-16) — Demo-parity + click-capture + fuzzy-host match
  *  Purpose: Render the exact same UX as the working Village demo across all properties
  *  Labels: Guided → “Book a Showing”; Self-guided → “Self-Guided Viewing”
  */
@@ -120,14 +120,27 @@
   }
 
   // ---------- Init ----------
+  function pickMap(host){
+    // Exact match first
+    if(MAP[host]) return MAP[host];
+    // Fuzzy contains match on host
+    var k, key, best=null;
+    for(k in MAP){ key = k.replace(/[-_.]/g,''); if(host.replace(/[-_.]/g,'').indexOf(key)>=0){ best = MAP[k]; break; } }
+    // Try title-based hint
+    if(!best){
+      var t=(d.title||'').toLowerCase();
+      for(k in MAP){ if(t.indexOf(k.split('.')[0])>=0){ best = MAP[k]; break; } }
+    }
+    return best||null;
+  }
+
   function init(){
     var host=(location.hostname||'').toLowerCase();
-    var cfg=MAP[host];
-    // Per-page override option
+    var cfg=pickMap(host);
     var ctn=d.querySelector('#mwm-tour-widget');
     var guided = (ctn && ctn.getAttribute('data-guided')) || (cfg && cfg.guided);
     var self   = (ctn && ctn.getAttribute('data-selfguided')) || (cfg && cfg.self);
-    if(!guided && !self){ console.warn('[MWM] No URLs found for this host.'); return; }
+    if(!guided && !self){ console.warn('[MWM] No URLs found for this host:', host); return; }
     build(guided||'about:blank', self||'about:blank');
   }
 
