@@ -12,13 +12,19 @@
     box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     cursor: pointer;
     z-index: 9999;
-    animation: pulse 2s infinite;
+    animation: pulse 2s infinite, fadeIn 1s ease forwards;
     display: flex;
     align-items: center;
     gap: 8px;
     font-weight: 600;
+    opacity: 0;
+    transform: translateY(20px);
     transition: transform 0.2s ease;
     font-family: 'Poppins', sans-serif;
+  }
+  .floating-scheduler-mini.show {
+    opacity: 1;
+    transform: translateY(0);
   }
   .floating-scheduler-mini:hover {
     filter: brightness(1.1);
@@ -32,6 +38,9 @@
   @keyframes svgPulse {
     0%,100% { transform: scale(1); }
     50% { transform: scale(1.15); }
+  }
+  @keyframes fadeIn {
+    to { opacity: 1; transform: translateY(0); }
   }
   .floating-scheduler-mini svg {
     width: 20px; height: 20px; fill: #fff;
@@ -48,15 +57,29 @@
   const guidedBtn = document.createElement('div');
   guidedBtn.id = 'openGuided';
   guidedBtn.className = 'floating-scheduler-mini';
-  guidedBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 12c2.67 0 8 1.34 8 4v3H4v-3c0-2.66 5.33-4 8-4zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/></svg> Book a Showing`;
+  guidedBtn.innerHTML = `
+    <svg viewBox="0 0 24 24"><path d="M12 12c2.67 0 8 1.34 8 4v3H4v-3c0-2.66 5.33-4 8-4zm0-2a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/></svg>
+    <span>Book a Showing</span>
+  `;
 
   const selfBtn = document.createElement('div');
   selfBtn.id = 'openSelfGuided';
   selfBtn.className = 'floating-scheduler-mini';
-  selfBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 17a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm6-6V9a6 6 0 1 0-12 0v2H5v10h14V11h-1zm-8 0V9a4 4 0 1 1 8 0v2h-8z"/></svg> Self-Guided Viewing`;
+  selfBtn.innerHTML = `
+    <svg viewBox="0 0 24 24"><path d="M12 17a2 2 0 1 0 0-4 2 2 0 0 0 0 4zm6-6V9a6 6 0 1 0-12 0v2H5v10h14V11h-1zm-8 0V9a4 4 0 1 1 8 0v2h-8z"/></svg>
+    <span>Self-Guided Viewing</span>
+  `;
 
   document.body.appendChild(guidedBtn);
   document.body.appendChild(selfBtn);
+
+  // --- Fade in both buttons once DOM ready ---
+  window.addEventListener("load", () => {
+    setTimeout(() => {
+      guidedBtn.classList.add("show");
+      selfBtn.classList.add("show");
+    }, 150);
+  });
 
   // --- Property Map ---
   const map = {
@@ -96,7 +119,7 @@
       g: "https://www.myshowing.com/Midwest_Property_Management/Cambrian_Court_(Cambrian_Heights)/scheduletourwidget/a0F0H00000d3i9vUAA/",
       s: "https://prop.peek.us/66aaaa33f7d05462a7f4be8e/self-guided-tour/"
     },
-    "secondstreetfundcommercial.prospectportal.com": { // test
+    "secondstreetfundcommercial.prospectportal.com": {
       g: "https://www.myshowing.com/Midwest_Property_Management/The_Village_at_Southgate_(Southgate)/scheduletourwidget/a0F0H00000d3iAPUAY/",
       s: "https://prop.peek.us/66350d32f4dbddfd2b1863d7/self-guided-tour/"
     }
@@ -105,6 +128,7 @@
   const host = (location.hostname || "").toLowerCase();
   const urls = map[host] || map["secondstreetfundcommercial.prospectportal.com"];
 
+  // --- Button Actions ---
   guidedBtn.addEventListener("click", () => window.open(urls.g, "_blank"));
   selfBtn.addEventListener("click", () => window.open(urls.s, "_blank"));
 })();
